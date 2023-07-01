@@ -1,0 +1,123 @@
+﻿Option Explicit
+
+Public Sub LogError(ByVal errorMessage As String)
+    On Error Resume Next
+    
+    ' Check if the "Log" sheet exists, if not, create it
+    Dim logSheet As Worksheet
+    Set logSheet = ThisWorkbook.Worksheets("Log")
+    If logSheet Is Nothing Then
+        Set logSheet = ThisWorkbook.Worksheets.Add
+        logSheet.Name = "Log"
+        With logSheet.Range("A1")
+            .Value = "Timestamp"
+            .Offset(0, 1).Value = "Error Message"
+        End With
+    End If
+    
+    ' Check if the error with the same timestamp and message already exists in the "Log" sheet
+    Dim errorTimestamp As Variant
+    errorTimestamp = Now()
+    Dim lastRow As Long
+    lastRow = logSheet.Cells(logSheet.Rows.Count, "A").End(xlUp).Row
+    Dim existingError As Range
+    Set existingError = logSheet.Range("A2:B" & lastRow).Find(What:=CLng(errorTimestamp) & errorMessage, LookIn:=xlValues, LookAt:=xlWhole)
+    
+    ' Log the error details in the "Log" sheet only if it doesn't already exist
+    If existingError Is Nothing Then
+        With logSheet
+            lastRow = lastRow + 1
+            .Cells(lastRow, "A").Value = errorTimestamp
+            .Cells(lastRow, "B").Value = errorMessage
+        End With
+    End If
+    
+    ' Send the error notification to Telegram
+    SendErrorNotification errorMessage
+End Sub
+
+
+Sub SendErrorNotification(ByVal errorMessage As String)
+    On Error GoTo ErrorHandler
+    
+    Dim botToken As String
+    Dim chatId As String
+    Dim telegramURL As String
+    Dim request As Object
+    Dim configSheet As Worksheet
+
+    Set configSheet = ThisWorkbook.Worksheets("Config")
+
+    ' Retrieve the bot token from cell A1 in the "Config" sheet
+    botToken = "6096896179:AAHSdUbVbxaS_MhpE7apaZte_2wscG18x7I"
+    
+    ' Retrieve the chat ID from cell A3 in the "Config" sheet
+    chatId = "5284312595"
+    
+    ' Set the Telegram Bot API URL
+    telegramURL = "https://api.telegram.org/bot" & botToken & "/sendMessage"
+    
+    ' Set the message to send
+    Dim message As String
+    message = "An error occurred in the macro. Error Details:" & vbCrLf & vbCrLf & errorMessage
+    
+    ' Construct the request URL with query parameters
+    Dim query As String
+    query = telegramURL & "?chat_id=" & chatId & "&text=" & URLEncode(message)
+    
+    ' Create the request object
+    Set request = CreateObject("MSXML2.XMLHTTP")
+    
+    ' Send the notification using Telegram Bot API
+    request.Open "GET", query, False
+    request.send
+    
+    If request.Status <> 200 Then
+        LogError "Telegram API request failed. Status code: " & request.Status & ", Response text: " & request.responseText
+    Else
+        LogError "Telegram API request succeeded."
+    End If
+    
+    Exit Sub
+    
+ErrorHandler:
+    LogError "An error occurred while sending the notification to Telegram: " & Err.Description
+End Sub
+
+
+
+
+Function URLEncode(ByVal Text As String) As String
+    ' Encode special characters in a URL-friendly format
+    Dim TempAns As String
+    Dim CurChr As Integer
+    
+    CurChr = 1
+    
+    Do Until CurChr - 1 = Len(Text)
+        Select Case Asc(Mid$(Text, CurChr, 1))
+            Case 48 To 57, 65 To 90, 97 To 122
+                TempAns = TempAns & Mid$(Text, CurChr, 1)
+            Case 32
+                TempAns = TempAns & "+"
+            Case Else
+                TempAns = TempAns & "%" & Right$("0" & Hex(Asc(Mid$(Text, CurChr, 1))), 2)
+        End Select
+    
+        CurChr = CurChr + 1
+    Loop
+    
+    URLEncode = TempAns
+End Function
+
+Public Sub TestLogError()
+
+    ' Simulating an error
+    On Error Resume Next
+    Err.Raise 1234, "Test Error", "This is a test error message."
+    
+    'Call the LogError function to log the error
+    LogError "An error occurred during testing: " & Err.Description
+    
+    MsgBox "Error logged successfully. Please check the 'Log' sheet."
+End Sub

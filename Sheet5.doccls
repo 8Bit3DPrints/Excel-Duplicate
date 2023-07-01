@@ -1,0 +1,30 @@
+﻿Private Sub ShowHelpDocument()
+    On Error GoTo ErrorHandler
+    
+    Dim helpSheet As Worksheet
+    Set helpSheet = ThisWorkbook.Worksheets("Instructions")
+    If helpSheet Is Nothing Then
+        Set helpSheet = ThisWorkbook.Worksheets.Add
+        helpSheet.Name = "Instructions"
+    End If
+    
+    ' Clear existing content in the "Instructions" sheet
+    helpSheet.Cells.ClearContents
+    
+    ' Print instructions to the "Instructions" sheet
+    helpSheet.Range("A1").Value = "Instructions for using the macro:"
+    helpSheet.Range("A3").Value = "1. Enter the wire label and quantity in the respective text boxes."
+    helpSheet.Range("A4").Value = "2. Press 'Enter' to update the worksheet with the input values."
+    helpSheet.Range("A5").Value = "3. Press the 'Export' button to export the sheet data to a new workbook or save the sheet for printing."
+    helpSheet.Range("A6").Value = "*Note* - The worksheet will save as an Excel file. This is the only format that the Brady printer currently uses."
+    helpSheet.Range("A7").Value = "4. To clear the data, click the 'Clear Data' button and confirm the action."
+    helpSheet.Range("A8").Value = "5. The 'Log' sheet contains the logged errors, if any."
+    helpSheet.Range("A9").Value = "6. For additional help, refer to the 'Instructions' sheet or click the 'contact support' button."
+    
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "An error occurred while creating or updating the Help Document.", vbExclamation, "Error"
+    Exit Sub
+End Sub
+
